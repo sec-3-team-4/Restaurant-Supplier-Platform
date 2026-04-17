@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QJsonObject>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -15,9 +16,17 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+    ~MainWindow();
+
+private slots:
+    void handleLogin();
 
 private:
     Ui::MainWindow *ui;
+
+    void sendLoginRequest(const QString &username, const QString &password);
+    void handleResponse(const QJsonObject &response);
+    void updateConnectionStatus(bool connected);
 };
+
 #endif // MAINWINDOW_H
