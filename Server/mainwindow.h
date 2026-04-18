@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QTcpServer>
 #include <QTcpSocket>
 
 QT_BEGIN_NAMESPACE
@@ -17,11 +18,14 @@ public:
     ~MainWindow();
 
 private slots:
-    void on_searchButton_clicked();
+    void handleNewConnection();
+    void readClient();
 
 private:
     Ui::MainWindow *ui;
-    QTcpSocket *socket;
+
+    QTcpServer *server;
+    QTcpSocket *clientSocket;
 };
 
 #endif
