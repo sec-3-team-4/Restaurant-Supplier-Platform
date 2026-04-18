@@ -2,6 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+<<<<<<< HEAD
+=======
+#include <QJsonObject>
+>>>>>>> 1f77c50 (Update login integration with socket communication)
 #include <QTcpSocket>
 
 QT_BEGIN_NAMESPACE
@@ -21,7 +25,16 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+<<<<<<< HEAD
     QTcpSocket *socket;
+=======
+
+    QTcpSocket *socket;
+
+    void sendLoginRequest(const QString &username, const QString &password);
+    void handleResponse(const QJsonObject &response);
+    void updateConnectionStatus(bool connected);
+>>>>>>> 1f77c50 (Update login integration with socket communication)
 };
 
 #endif
