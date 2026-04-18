@@ -3,11 +3,7 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
-<<<<<<< HEAD
-=======
-#include <QJsonDocument>
 #include <QTcpSocket>
->>>>>>> 1f77c50 (Update login integration with socket communication)
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -16,34 +12,23 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-<<<<<<< HEAD
-    socket = new QTcpSocket(this);
-    socket->connectToHost("127.0.0.1", 1234);
-=======
-    // Create and connect socket (same as Jana's code)
     socket = new QTcpSocket(this);
     socket->connectToHost("127.0.0.1", 1234);
 
     qDebug() << "Connecting to server...";
 
-    // Update connection status
     connect(socket, &QTcpSocket::connected, this, [=]() {
         ui->connectionLabel->setText("Connected");
         ui->connectionLabel->setStyleSheet("color: green;");
-        qDebug() << "Connected to server";
     });
 
     connect(socket, &QTcpSocket::disconnected, this, [=]() {
         ui->connectionLabel->setText("Disconnected");
         ui->connectionLabel->setStyleSheet("color: red;");
-        qDebug() << "Disconnected from server";
     });
 
-    // Receive server response
     connect(socket, &QTcpSocket::readyRead, this, [=]() {
-
         QByteArray responseData = socket->readAll();
-        qDebug() << "Received:" << responseData;
 
         QJsonDocument doc = QJsonDocument::fromJson(responseData);
         QJsonObject response = doc.object();
@@ -51,12 +36,8 @@ MainWindow::MainWindow(QWidget *parent)
         handleResponse(response);
     });
 
-    // Connect login button
     connect(ui->loginButton, &QPushButton::clicked,
             this, &MainWindow::handleLogin);
->>>>>>> 1f77c50 (Update login integration with socket communication)
-
-    qDebug() << "Connected to server";
 }
 
 MainWindow::~MainWindow()
@@ -64,19 +45,11 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-<<<<<<< HEAD
-void MainWindow::on_searchButton_clicked()
-=======
-// Handle login button
 void MainWindow::handleLogin()
->>>>>>> 1f77c50 (Update login integration with socket communication)
 {
-    QJsonObject obj;
-    obj["type"] = "search_request";
-    obj["sender"] = "malak";
+    QString username = ui->usernameInput->text();
+    QString password = ui->passwordInput->text();
 
-<<<<<<< HEAD
-=======
     if (username.isEmpty() || password.isEmpty()) {
         ui->statusLabel->setText("Please fill all fields");
         return;
@@ -88,22 +61,12 @@ void MainWindow::handleLogin()
     sendLoginRequest(username, password);
 }
 
-//Send login request to server
 void MainWindow::sendLoginRequest(const QString &username, const QString &password)
 {
->>>>>>> 1f77c50 (Update login integration with socket communication)
     QJsonObject data;
-    data["category"] = ui->lineEditCategory->text();
+    data["username"] = username;
+    data["password"] = password;
 
-<<<<<<< HEAD
-    obj["data"] = data;
-
-    QJsonDocument doc(obj);
-    socket->write(doc.toJson(QJsonDocument::Compact));
-
-    qDebug() << "Sent:" << doc.toJson(QJsonDocument::Compact);
-}
-=======
     QJsonObject request;
     request["type"] = "login_request";
     request["sender"] = username;
@@ -111,13 +74,11 @@ void MainWindow::sendLoginRequest(const QString &username, const QString &passwo
     request["data"] = data;
 
     QJsonDocument doc(request);
-
     socket->write(doc.toJson(QJsonDocument::Compact));
 
-    qDebug() << "Sent login request:" << doc.toJson(QJsonDocument::Compact);
+    qDebug() << "Sent login request";
 }
 
-// Handle server response
 void MainWindow::handleResponse(const QJsonObject &response)
 {
     QString status = response["status"].toString();
@@ -136,4 +97,14 @@ void MainWindow::handleResponse(const QJsonObject &response)
 
     ui->loginButton->setEnabled(true);
 }
->>>>>>> 1f77c50 (Update login integration with socket communication)
+
+void MainWindow::updateConnectionStatus(bool connected)
+{
+    if (connected) {
+        ui->connectionLabel->setText("Connected");
+        ui->connectionLabel->setStyleSheet("color: green;");
+    } else {
+        ui->connectionLabel->setText("Disconnected");
+        ui->connectionLabel->setStyleSheet("color: red;");
+    }
+}
