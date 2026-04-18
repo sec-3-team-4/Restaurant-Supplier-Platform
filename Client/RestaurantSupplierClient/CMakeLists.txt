@@ -11,6 +11,13 @@ qt_add_executable(RestaurantSupplierClient
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    logic/messagebuilder.cpp
+     logic/inputvalidator.cpp
+
+    logic/messagebuilder.h
+     logic/inputvalidator.h
+     logic/messagetypes.h
+    logic/validationresult.h
 )
 
 target_link_libraries(RestaurantSupplierClient
