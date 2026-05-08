@@ -1,11 +1,12 @@
-#include "mainwindow.h"
+#include <iostream>
+#include <boost/asio.hpp>
+#include "AsioServer.h"
 
-#include <QApplication>
+int main() {
+    std::cout << "Server starting...\n";
 
-int main(int argc, char *argv[])
-{
-    QApplication a(argc, argv);
-    MainWindow w;
-    w.show();
-    return QCoreApplication::exec();
+    boost::asio::io_context io;
+    AsioServer server(io, 12345);
+
+    io.run();
 }
