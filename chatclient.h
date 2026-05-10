@@ -1,28 +1,26 @@
 #ifndef CHATCLIENT_H
 #define CHATCLIENT_H
 
-#include <QObject>
+#include "inetworkclient.h" // Add this!
 #include <QTcpSocket>
-#include <QJsonObject>
 #include <QJsonDocument>
 
-class ChatClient : public QObject {
+// Change QObject to INetworkClient
+class ChatClient : public INetworkClient
+{
     Q_OBJECT
 public:
     explicit ChatClient(QObject *parent = nullptr);
-    void connectToServer(const QString &host, quint16 port);
-    void sendMessage(const QJsonObject &json); // Jana: This sends your Chat JSON
 
-signals:
-    void connected();    // This is the signal you are connecting to
-    void disconnected();
-    void messageReceived(const QJsonObject &json);
+    // Override the interface functions
+    void connectToServer(const QString &host, quint16 port) override;
+    void sendMessage(const QJsonObject &json) override;
 
 private slots:
-    void onReadyRead(); // The mandatory Async Read Loop for Milestone 3
+    void onReadyRead();
 
 private:
-    QTcpSocket *m_socket; // We use m_socket to avoid naming conflicts
+    QTcpSocket *m_socket;
 };
 
-#endif
+#endif // CHATCLIENT_H

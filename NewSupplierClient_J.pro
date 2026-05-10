@@ -8,6 +8,7 @@ SOURCES += \
     chatclient.cpp
 
 HEADERS += \
+    inetworkclient.h \
     mainwindow.h \
     chatclient.h
 

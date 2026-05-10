@@ -1,13 +1,17 @@
 #include "chatclient.h"
 
-ChatClient::ChatClient(QObject *parent) : QObject(parent) {
+// Change QObject(parent) to INetworkClient(parent)
+ChatClient::ChatClient(QObject *parent) : INetworkClient(parent)
+{
     m_socket = new QTcpSocket(this);
+
+    // The rest stays the same
     connect(m_socket, &QTcpSocket::connected, this, &ChatClient::connected);
     connect(m_socket, &QTcpSocket::disconnected, this, &ChatClient::disconnected);
     connect(m_socket, &QTcpSocket::readyRead, this, &ChatClient::onReadyRead);
 }
-
-void ChatClient::connectToServer(const QString &host, quint16 port) {
+void ChatClient::connectToServer(const QString &host, quint16 port)
+{
     m_socket->connectToHost(host, port);
 }
 
