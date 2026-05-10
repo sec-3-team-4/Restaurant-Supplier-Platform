@@ -18,6 +18,9 @@ qt_add_executable(RestaurantSupplierClient
      logic/inputvalidator.h
      logic/messagetypes.h
     logic/validationresult.h
+    logic/messageservice.cpp
+    logic/inetworkclient.h
+    logic/messageservice.h
 )
 
 target_link_libraries(RestaurantSupplierClient
@@ -39,3 +42,29 @@ qt_generate_deploy_app_script(
     NO_UNSUPPORTED_PLATFORM_ERROR
 )
 install(SCRIPT ${deploy_script})
+enable_testing()
+
+find_package(Qt6 REQUIRED COMPONENTS Test)
+
+qt_add_executable(ClientLogicTests
+    tests/test_clientlogic.cpp
+
+    logic/messagebuilder.cpp
+    logic/inputvalidator.cpp
+    logic/messageservice.cpp
+
+    logic/messagebuilder.h
+    logic/inputvalidator.h
+    logic/messagetypes.h
+    logic/validationresult.h
+    logic/inetworkclient.h
+    logic/messageservice.h
+)
+
+target_link_libraries(ClientLogicTests
+    PRIVATE
+        Qt6::Core
+        Qt6::Test
+)
+
+add_test(NAME ClientLogicTests COMMAND ClientLogicTests)
