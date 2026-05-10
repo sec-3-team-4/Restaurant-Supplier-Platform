@@ -13,29 +13,37 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
 
     socket = new QTcpSocket(this);
-    socket->connectToHost("127.0.0.1", 1234);
+
+    // Connect to server
+    socket->connectToHost("10.40.41.183", 1234);
 
     qDebug() << "Connecting to server...";
 
+    // DEBUG: connection status
     connect(socket, &QTcpSocket::connected, this, [=]() {
+        qDebug() << "CONNECTED TO SERVER";
         ui->connectionLabel->setText("Connected");
         ui->connectionLabel->setStyleSheet("color: green;");
     });
 
     connect(socket, &QTcpSocket::disconnected, this, [=]() {
+        qDebug() << "DISCONNECTED FROM SERVER";
         ui->connectionLabel->setText("Disconnected");
         ui->connectionLabel->setStyleSheet("color: red;");
     });
 
+    //  RECEIVE RESPONSE
     connect(socket, &QTcpSocket::readyRead, this, [=]() {
-        QByteArray responseData = socket->readAll();
 
-        QJsonDocument doc = QJsonDocument::fromJson(responseData);
-        QJsonObject response = doc.object();
+        QByteArray data = socket->readAll();
 
-        handleResponse(response);
+        qDebug() << "RAW RESPONSE:" << data;
+
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        handleResponse(doc.object());
     });
 
+    // Login button
     connect(ui->loginButton, &QPushButton::clicked,
             this, &MainWindow::handleLogin);
 }
@@ -76,11 +84,13 @@ void MainWindow::sendLoginRequest(const QString &username, const QString &passwo
     QJsonDocument doc(request);
     socket->write(doc.toJson(QJsonDocument::Compact));
 
-    qDebug() << "Sent login request";
+    qDebug() << "Sent login request:" << doc.toJson(QJsonDocument::Compact);
 }
 
 void MainWindow::handleResponse(const QJsonObject &response)
 {
+    qDebug() << "Parsed response:" << response;
+
     QString status = response["status"].toString();
 
     if (status == "success") {

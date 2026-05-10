@@ -14,15 +14,14 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private slots:
-    void on_searchButton_clicked();
+    void handleLogin();
 
 private:
     Ui::MainWindow *ui;
-
     QTcpSocket *socket;
 
     void sendLoginRequest(const QString &username, const QString &password);
