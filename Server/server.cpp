@@ -55,19 +55,14 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
             std::string msg(buffer->data(), length);
 
-            std::cout << "\nReceived:\n" << msg << std::endl;
+            std::cout << "RAW MSG: " << msg << std::endl;
 
             if (!validator.isValid(msg))
             {
-                std::cout << "INVALID MESSAGE\n";
+                std::cout << "INVALID MESSAGE" << std::endl;
                 handleClient(socket);
                 return;
             }
-
-            std::cout << "VALID MESSAGE\n";
-
-            std::string result = router.route(msg);
-            std::cout << result << std::endl;
 
             try
             {
@@ -79,31 +74,42 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
                 std::string text = "";
 
-                if (json.contains("data") &&
-                    json["data"].contains("text"))
+                if (json.contains("data") && json["data"].contains("text"))
                 {
                     text = json["data"]["text"];
                 }
 
-                std::cout << "Type: " << type << std::endl;
-                std::cout << "Sender: " << sender << std::endl;
-                std::cout << "Receiver: " << receiver << std::endl;
+                std::cout << "TYPE RECEIVED: " << type << std::endl;
 
-                if (!text.empty())
-                {
-                    std::cout << "Message: " << text << std::endl;
-                }
-
-                // LOGIN
+                // ================= LOGIN =================
                 if (type == "login_request")
                 {
                     userManager.addUser(sender);
                     clients[sender] = socket;
 
                     std::cout << sender << " logged in" << std::endl;
+
+                    nlohmann::json response;
+                    response["type"] = "login_response";
+                    response["status"] = "success";
+                    response["message"] = "Login successful";
+
+                    std::string reply = response.dump() + "\n";
+
+                    boost::system::error_code ec2;
+                    boost::asio::write(*socket, boost::asio::buffer(reply), ec2);
+
+                    if (ec2)
+                    {
+                        std::cout << "LOGIN SEND ERROR: " << ec2.message() << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "LOGIN RESPONSE SENT" << std::endl;
+                    }
                 }
 
-                // LOGOUT
+                // ================= LOGOUT =================
                 if (type == "logout")
                 {
                     userManager.removeUser(sender);
@@ -112,39 +118,35 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                     std::cout << sender << " logged out" << std::endl;
                 }
 
-                // CHAT MESSAGE
+                // ================= CHAT =================
                 if (type == "chat_message")
                 {
                     std::cout << "Processing chat message..." << std::endl;
 
                     if (clients.find(receiver) != clients.end())
                     {
-                        std::string forwardMsg =
-                            sender + ": " + text;
+                        std::string forwardMsg = sender + ": " + text;
 
                         boost::asio::write(
                             *clients[receiver],
-                            boost::asio::buffer(forwardMsg));
+                            boost::asio::buffer(forwardMsg + "\n"));
 
-                        std::cout << "Message forwarded successfully to "
-                                  << receiver << std::endl;
+                        std::cout << "Message forwarded to " << receiver << std::endl;
                     }
                     else
                     {
-                        std::cout << "Receiver not online: "
-                                  << receiver << std::endl;
+                        std::cout << "Receiver not online: " << receiver << std::endl;
                     }
                 }
 
-                // ONLINE CHECK
                 if (userManager.isOnline(sender))
                 {
                     std::cout << sender << " is ONLINE" << std::endl;
                 }
             }
-            catch (...)
+            catch (const std::exception& e)
             {
-                std::cout << "JSON parsing error" << std::endl;
+                std::cout << "JSON ERROR: " << e.what() << std::endl;
             }
 
             handleClient(socket);
