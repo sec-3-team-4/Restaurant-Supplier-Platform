@@ -3,6 +3,8 @@
 
 #include <boost/asio.hpp>
 #include <memory>
+#include <map>
+#include <string>
 
 class Server
 {
@@ -14,6 +16,8 @@ private:
     void handleClient(std::shared_ptr<boost::asio::ip::tcp::socket> socket);
 
     boost::asio::ip::tcp::acceptor acceptor_;
+
+    std::map<std::string, std::shared_ptr<boost::asio::ip::tcp::socket>> clients;
 };
 
 #endif
