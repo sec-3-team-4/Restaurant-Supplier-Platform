@@ -75,46 +75,76 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
                 std::string type = json.value("type", "");
                 std::string sender = json.value("sender", "");
+                std::string receiver = json.value("receiver", "");
+
+                std::string text = "";
+
+                if (json.contains("data") &&
+                    json["data"].contains("text"))
+                {
+                    text = json["data"]["text"];
+                }
 
                 std::cout << "Type: " << type << std::endl;
                 std::cout << "Sender: " << sender << std::endl;
+                std::cout << "Receiver: " << receiver << std::endl;
+
+                if (!text.empty())
+                {
+                    std::cout << "Message: " << text << std::endl;
+                }
 
                 if (type == "login_request")
                 {
                     userManager.addUser(sender);
+
                     clients[sender] = socket;
-                    std::cout << sender << " logged in" << std::endl;
+
+                    std::cout << sender
+                              << " logged in" << std::endl;
                 }
 
                 if (type == "logout")
                 {
                     userManager.removeUser(sender);
+
                     clients.erase(sender);
-                    std::cout << sender << " logged out" << std::endl;
+
+                    std::cout << sender
+                              << " logged out" << std::endl;
                 }
 
                 if (type == "chat_message")
                 {
-                    std::string receiver = json.value("receiver", "");
-                    std::string text = json["data"].value("text", "");
-
                     if (clients.find(receiver) != clients.end())
                     {
-                        std::string forwardMsg = sender + ": " + text;
+                        std::string forwardMsg =
+                            sender + ": " + text;
 
-                        boost::asio::write(*clients[receiver],
+                        boost::asio::write(
+                            *clients[receiver],
                             boost::asio::buffer(forwardMsg));
+
+                        std::cout << "Message forwarded successfully"
+                                  << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Receiver not online"
+                                  << std::endl;
                     }
                 }
 
                 if (userManager.isOnline(sender))
                 {
-                    std::cout << sender << " is ONLINE" << std::endl;
+                    std::cout << sender
+                              << " is ONLINE" << std::endl;
                 }
             }
             catch (...)
             {
-                std::cout << "JSON parsing error" << std::endl;
+                std::cout << "JSON parsing error"
+                          << std::endl;
             }
 
             handleClient(socket);
