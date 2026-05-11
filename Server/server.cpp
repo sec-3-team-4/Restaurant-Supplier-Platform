@@ -94,28 +94,29 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                     std::cout << "Message: " << text << std::endl;
                 }
 
+                // LOGIN
                 if (type == "login_request")
                 {
                     userManager.addUser(sender);
-
                     clients[sender] = socket;
 
-                    std::cout << sender
-                              << " logged in" << std::endl;
+                    std::cout << sender << " logged in" << std::endl;
                 }
 
+                // LOGOUT
                 if (type == "logout")
                 {
                     userManager.removeUser(sender);
-
                     clients.erase(sender);
 
-                    std::cout << sender
-                              << " logged out" << std::endl;
+                    std::cout << sender << " logged out" << std::endl;
                 }
 
+                // CHAT MESSAGE
                 if (type == "chat_message")
                 {
+                    std::cout << "Processing chat message..." << std::endl;
+
                     if (clients.find(receiver) != clients.end())
                     {
                         std::string forwardMsg =
@@ -125,26 +126,25 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                             *clients[receiver],
                             boost::asio::buffer(forwardMsg));
 
-                        std::cout << "Message forwarded successfully"
-                                  << std::endl;
+                        std::cout << "Message forwarded successfully to "
+                                  << receiver << std::endl;
                     }
                     else
                     {
-                        std::cout << "Receiver not online"
-                                  << std::endl;
+                        std::cout << "Receiver not online: "
+                                  << receiver << std::endl;
                     }
                 }
 
+                // ONLINE CHECK
                 if (userManager.isOnline(sender))
                 {
-                    std::cout << sender
-                              << " is ONLINE" << std::endl;
+                    std::cout << sender << " is ONLINE" << std::endl;
                 }
             }
             catch (...)
             {
-                std::cout << "JSON parsing error"
-                          << std::endl;
+                std::cout << "JSON parsing error" << std::endl;
             }
 
             handleClient(socket);
