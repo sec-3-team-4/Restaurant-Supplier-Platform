@@ -1,17 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
-project(ChatServer VERSION 0.1 LANGUAGES CXX)
+
+project(Milestone2Server)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED)
 
-
-add_executable(ChatServer
+add_executable(server
     main.cpp
-    ClientSession.cpp
-    MessageRouter.cpp
+    server.cpp
 )
 
-target_include_directories(ChatServer PRIVATE ${Boost_INCLUDE_DIRS})
-target_link_libraries(ChatServer PRIVATE ${Boost_LIBRARIES})
+target_include_directories(server PRIVATE
+    /opt/homebrew/include
+)
+
+target_link_libraries(server PRIVATE Boost::boost)
+

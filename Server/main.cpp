@@ -1,12 +1,13 @@
-#include <iostream>
+#include "server.h"
 #include <boost/asio.hpp>
-#include "AsioServer.h"
 
-int main() {
-    std::cout << "Server starting...\n";
-
+int main()
+{
     boost::asio::io_context io;
-    AsioServer server(io, 12345);
+
+    Server server(io, 12345);
 
     io.run();
+
+    return 0;
 }
