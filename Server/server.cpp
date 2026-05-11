@@ -11,6 +11,7 @@
 
 using boost::asio::ip::tcp;
 
+// managers
 UserManager userManager;
 JsonValidator validator;
 MessageRouter router;
@@ -22,6 +23,7 @@ Server::Server(boost::asio::io_context& io, int port)
     startAccept();
 }
 
+// accept clients
 void Server::startAccept()
 {
     auto socket = std::make_shared<tcp::socket>(acceptor_.get_executor());
@@ -39,6 +41,7 @@ void Server::startAccept()
         });
 }
 
+// handle client
 void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 {
     auto buffer = std::make_shared<std::array<char, 1024>>();
@@ -57,12 +60,15 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
             std::cout << "\nReceived:\n" << msg << std::endl;
 
+            // validate
             if (!validator.isValid(msg))
             {
                 std::cout << "INVALID MESSAGE\n";
                 handleClient(socket);
                 return;
             }
+
+            std::cout << "VALID MESSAGE\n";
 
             try
             {
@@ -72,11 +78,11 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                 std::string sender = json.value("sender", "");
                 std::string receiver = json.value("receiver", "");
 
-                std::string text;
-
+                std::string text = "";
                 if (json.contains("data") && json["data"].contains("text"))
                     text = json["data"]["text"];
 
+                // print
                 std::cout << "\nType: " << type << std::endl;
                 std::cout << "Sender: " << sender << std::endl;
                 std::cout << "Receiver: " << receiver << std::endl;
@@ -84,6 +90,7 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                 if (!text.empty())
                     std::cout << "Message: " << text << std::endl;
 
+                // login
                 if (type == "login_request")
                 {
                     userManager.addUser(sender);
@@ -98,10 +105,16 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
                     std::string reply = response.dump() + "\n";
 
-                    boost::asio::write(*socket, boost::asio::buffer(reply));
+                    boost::system::error_code ec2;
+                    boost::asio::write(*socket, boost::asio::buffer(reply), ec2);
 
-                    std::cout << "Login response sent\n";
+                    if (ec2)
+                        std::cout << "LOGIN SEND ERROR: " << ec2.message() << std::endl;
+                    else
+                        std::cout << "LOGIN RESPONSE SENT\n";
                 }
+
+                // logout
                 else if (type == "logout")
                 {
                     userManager.removeUser(sender);
@@ -109,6 +122,8 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
                     std::cout << "LOGOUT: " << sender << std::endl;
                 }
+
+                // chat
                 else if (type == "chat_message")
                 {
                     std::cout << "\nCHAT from " << sender << " to " << receiver << std::endl;
@@ -117,11 +132,17 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                     {
                         std::string forwardMsg = sender + ": " + text;
 
+                        boost::system::error_code ec3;
                         boost::asio::write(
                             *clients[receiver],
-                            boost::asio::buffer(forwardMsg + "\n"));
+                            boost::asio::buffer(forwardMsg + "\n"),
+                            ec3
+                        );
 
-                        std::cout << "Message forwarded to " << receiver << std::endl;
+                        if (ec3)
+                            std::cout << "CHAT SEND ERROR: " << ec3.message() << std::endl;
+                        else
+                            std::cout << "Message forwarded to " << receiver << std::endl;
                     }
                     else
                     {
@@ -129,6 +150,7 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                     }
                 }
 
+                // status
                 if (userManager.isOnline(sender))
                     std::cout << sender << " is ONLINE" << std::endl;
             }
