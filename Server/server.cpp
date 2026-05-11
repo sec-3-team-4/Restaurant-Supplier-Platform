@@ -55,11 +55,11 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
             std::string msg(buffer->data(), length);
 
-            std::cout << "RAW MSG: " << msg << std::endl;
+            std::cout << "\nReceived:\n" << msg << std::endl;
 
             if (!validator.isValid(msg))
             {
-                std::cout << "INVALID MESSAGE" << std::endl;
+                std::cout << "INVALID MESSAGE\n";
                 handleClient(socket);
                 return;
             }
@@ -72,22 +72,24 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                 std::string sender = json.value("sender", "");
                 std::string receiver = json.value("receiver", "");
 
-                std::string text = "";
+                std::string text;
 
                 if (json.contains("data") && json["data"].contains("text"))
-                {
                     text = json["data"]["text"];
-                }
 
-                std::cout << "TYPE RECEIVED: " << type << std::endl;
+                std::cout << "\nType: " << type << std::endl;
+                std::cout << "Sender: " << sender << std::endl;
+                std::cout << "Receiver: " << receiver << std::endl;
 
-                // ================= LOGIN =================
+                if (!text.empty())
+                    std::cout << "Message: " << text << std::endl;
+
                 if (type == "login_request")
                 {
                     userManager.addUser(sender);
                     clients[sender] = socket;
 
-                    std::cout << sender << " logged in" << std::endl;
+                    std::cout << "\nLOGIN SUCCESS: " << sender << std::endl;
 
                     nlohmann::json response;
                     response["type"] = "login_response";
@@ -96,32 +98,20 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
                     std::string reply = response.dump() + "\n";
 
-                    boost::system::error_code ec2;
-                    boost::asio::write(*socket, boost::asio::buffer(reply), ec2);
+                    boost::asio::write(*socket, boost::asio::buffer(reply));
 
-                    if (ec2)
-                    {
-                        std::cout << "LOGIN SEND ERROR: " << ec2.message() << std::endl;
-                    }
-                    else
-                    {
-                        std::cout << "LOGIN RESPONSE SENT" << std::endl;
-                    }
+                    std::cout << "Login response sent\n";
                 }
-
-                // ================= LOGOUT =================
-                if (type == "logout")
+                else if (type == "logout")
                 {
                     userManager.removeUser(sender);
                     clients.erase(sender);
 
-                    std::cout << sender << " logged out" << std::endl;
+                    std::cout << "LOGOUT: " << sender << std::endl;
                 }
-
-                // ================= CHAT =================
-                if (type == "chat_message")
+                else if (type == "chat_message")
                 {
-                    std::cout << "Processing chat message..." << std::endl;
+                    std::cout << "\nCHAT from " << sender << " to " << receiver << std::endl;
 
                     if (clients.find(receiver) != clients.end())
                     {
@@ -140,9 +130,7 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
                 }
 
                 if (userManager.isOnline(sender))
-                {
                     std::cout << sender << " is ONLINE" << std::endl;
-                }
             }
             catch (const std::exception& e)
             {
