@@ -20,6 +20,8 @@ public:
 private slots:
     void handleLogin();
 
+    void on_loginButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     QTcpSocket *socket;
