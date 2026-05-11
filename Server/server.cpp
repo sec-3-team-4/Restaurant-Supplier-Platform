@@ -75,38 +75,68 @@ void Server::handleClient(std::shared_ptr<tcp::socket> socket)
 
                 std::string type = json.value("type", "");
                 std::string sender = json.value("sender", "");
+                std::string receiver = json.value("receiver", "");
+
+                std::string text = "";
+
+                if (json.contains("data") &&
+                    json["data"].contains("text"))
+                {
+                    text = json["data"]["text"];
+                }
 
                 std::cout << "Type: " << type << std::endl;
                 std::cout << "Sender: " << sender << std::endl;
+                std::cout << "Receiver: " << receiver << std::endl;
 
+                if (!text.empty())
+                {
+                    std::cout << "Message: " << text << std::endl;
+                }
+
+                // LOGIN
                 if (type == "login_request")
                 {
                     userManager.addUser(sender);
                     clients[sender] = socket;
+
                     std::cout << sender << " logged in" << std::endl;
                 }
 
+                // LOGOUT
                 if (type == "logout")
                 {
                     userManager.removeUser(sender);
                     clients.erase(sender);
+
                     std::cout << sender << " logged out" << std::endl;
                 }
 
+                // CHAT MESSAGE
                 if (type == "chat_message")
                 {
-                    std::string receiver = json.value("receiver", "");
-                    std::string text = json["data"].value("text", "");
+                    std::cout << "Processing chat message..." << std::endl;
 
                     if (clients.find(receiver) != clients.end())
                     {
-                        std::string forwardMsg = sender + ": " + text;
+                        std::string forwardMsg =
+                            sender + ": " + text;
 
-                        boost::asio::write(*clients[receiver],
+                        boost::asio::write(
+                            *clients[receiver],
                             boost::asio::buffer(forwardMsg));
+
+                        std::cout << "Message forwarded successfully to "
+                                  << receiver << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "Receiver not online: "
+                                  << receiver << std::endl;
                     }
                 }
 
+                // ONLINE CHECK
                 if (userManager.isOnline(sender))
                 {
                     std::cout << sender << " is ONLINE" << std::endl;
