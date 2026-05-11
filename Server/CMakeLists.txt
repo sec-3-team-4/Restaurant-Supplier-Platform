@@ -15,3 +15,24 @@ add_executable(server
     MessageRouter.cpp
 )
 
+enable_testing()
+
+find_package(GTest REQUIRED)
+
+add_executable(server_tests
+    tests/server_tests.cpp
+    UserManager.cpp
+    JsonValidator.cpp
+    MessageRouter.cpp
+)
+
+target_include_directories(server_tests PRIVATE ${CMAKE_SOURCE_DIR})
+
+target_link_libraries(server_tests
+    GTest::gtest
+    GTest::gtest_main
+    pthread
+)
+
+add_test(NAME ServerTests COMMAND server_tests)
+
