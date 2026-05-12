@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QTcpSocket>
 
+
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -25,6 +26,8 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QTcpSocket *socket;
+
+    QTimer *connectionTimer;
 
     void sendLoginRequest(const QString &username, const QString &password);
     void handleResponse(const QJsonObject &response);

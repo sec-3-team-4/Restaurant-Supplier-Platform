@@ -44,6 +44,15 @@
       <property name="text">
        <string>&quot; &quot;</string>
       </property>
+      <property name="textFormat">
+       <enum>Qt::TextFormat::PlainText</enum>
+      </property>
+      <property name="openExternalLinks">
+       <bool>false</bool>
+      </property>
+      <property name="textInteractionFlags">
+       <set>Qt::TextInteractionFlag::NoTextInteraction</set>
+      </property>
      </widget>
     </item>
     <item>

@@ -16,40 +16,62 @@ MainWindow::MainWindow(QWidget *parent)
 
     qDebug() << "Client started...";
 
-    // ================= CONNECTION STATUS =================
+    // ================= CONNECTED =================
     connect(socket, &QTcpSocket::connected, this, [=]() {
+
         qDebug() << "CONNECTED";
 
         ui->connectionLabel->setText("Connected");
         ui->connectionLabel->setStyleSheet("color: green;");
+
+        ui->statusLabel->setText("Connected to server");
+        ui->statusLabel->setStyleSheet("color: green;");
+
+        // send login after connection
+        handleLogin();
     });
 
+    // ================= DISCONNECTED =================
     connect(socket, &QTcpSocket::disconnected, this, [=]() {
+
         qDebug() << "DISCONNECTED";
 
         ui->connectionLabel->setText("Disconnected");
         ui->connectionLabel->setStyleSheet("color: red;");
+
+        ui->statusLabel->setText("Disconnected from server");
+        ui->statusLabel->setStyleSheet("color: red;");
+
+        ui->loginButton->setEnabled(true);
     });
 
-    // ================= RECEIVE SERVER RESPONSE =================
+    // ================= ERROR =================
+    connect(socket, &QTcpSocket::errorOccurred, this,
+            [=](QAbstractSocket::SocketError) {
+
+                qDebug() << "ERROR:" << socket->errorString();
+
+                ui->connectionLabel->setText("Disconnected");
+                ui->connectionLabel->setStyleSheet("color: red;");
+
+                ui->statusLabel->setText("Login failed - server not reachable");
+                ui->statusLabel->setStyleSheet("color: red;");
+
+                ui->loginButton->setEnabled(true);
+            });
+
+    // ================= RECEIVE RESPONSE =================
     connect(socket, &QTcpSocket::readyRead, this, [=]() {
 
-        QByteArray responseData = socket->readAll();
+        QByteArray data = socket->readAll();
+        qDebug() << "RAW RESPONSE:" << data;
 
-        qDebug() << "RAW RESPONSE:" << responseData;
-
-        QJsonDocument doc = QJsonDocument::fromJson(responseData);
+        QJsonDocument doc = QJsonDocument::fromJson(data);
 
         if (!doc.isNull() && doc.isObject()) {
             handleResponse(doc.object());
-        } else {
-            qDebug() << "Invalid JSON received";
         }
     });
-
-    // ================= LOGIN BUTTON =================
-    connect(ui->loginButton, &QPushButton::clicked,
-            this, &MainWindow::on_loginButton_clicked);
 }
 
 MainWindow::~MainWindow()
@@ -57,16 +79,8 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-// ================= CONNECT + LOGIN =================
+// ================= LOGIN BUTTON =================
 void MainWindow::on_loginButton_clicked()
-{
-    qDebug() << "CLICKED → CONNECTING...";
-
-    socket->connectToHost("10.40.51.86", 1234);
-}
-
-// ================= LOGIN FUNCTION =================
-void MainWindow::handleLogin()
 {
     QString username = ui->usernameInput->text();
     QString password = ui->passwordInput->text();
@@ -77,16 +91,31 @@ void MainWindow::handleLogin()
         return;
     }
 
-    if (socket->state() != QAbstractSocket::ConnectedState) {
-        ui->statusLabel->setText("Not connected to server");
-        ui->statusLabel->setStyleSheet("color: red;");
-        qDebug() << "Socket not connected yet";
+    if (socket->state() == QAbstractSocket::ConnectingState ||
+        socket->state() == QAbstractSocket::ConnectedState)
+    {
+        qDebug() << "Already connecting/connected";
         return;
     }
 
-    ui->statusLabel->setText("Logging in...");
+    qDebug() << "CONNECTING...";
+
+    ui->statusLabel->setText("Connecting...");
     ui->statusLabel->setStyleSheet("color: orange;");
+
     ui->loginButton->setEnabled(false);
+
+    socket->connectToHost("10.40.51.86", 1234);
+}
+
+// ================= LOGIN REQUEST =================
+void MainWindow::handleLogin()
+{
+    if (socket->state() != QAbstractSocket::ConnectedState)
+        return;
+
+    QString username = ui->usernameInput->text();
+    QString password = ui->passwordInput->text();
 
     QJsonObject data;
     data["username"] = username;
@@ -98,32 +127,27 @@ void MainWindow::handleLogin()
     request["receiver"] = "server";
     request["data"] = data;
 
-    QByteArray jsonData =
-        QJsonDocument(request).toJson(QJsonDocument::Compact);
+    QByteArray json = QJsonDocument(request).toJson(QJsonDocument::Compact);
 
-    socket->write(jsonData + "\n");
+    socket->write(json + "\n");
     socket->flush();
 
-    qDebug() << "Sent login request:" << jsonData;
+    qDebug() << "Sent login request:" << json;
+
+    ui->statusLabel->setText("Logging in...");
+    ui->statusLabel->setStyleSheet("color: orange;");
 }
 
 // ================= RESPONSE HANDLER =================
 void MainWindow::handleResponse(const QJsonObject &response)
 {
-    qDebug() << "Parsed response:" << response;
-
     QString status = response["status"].toString();
 
     if (status == "success") {
         ui->statusLabel->setText("Login successful");
         ui->statusLabel->setStyleSheet("color: green;");
     } else {
-        QString message = response["message"].toString();
-
-        if (message.isEmpty())
-            message = "Login failed";
-
-        ui->statusLabel->setText(message);
+        ui->statusLabel->setText("Login failed");
         ui->statusLabel->setStyleSheet("color: red;");
     }
 
