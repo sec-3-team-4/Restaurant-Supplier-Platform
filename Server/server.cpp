@@ -3,64 +3,81 @@
 #include <array>
 #include <nlohmann/json.hpp>
 
+#include <boost/asio.hpp>
+
 using boost::asio::ip::tcp;
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
+using boost::asio::detached;
+using boost::asio::use_awaitable;
+using boost::asio::as_tuple;
 
-Server::Server(boost::asio::io_context& io, int port)
-    : acceptor_(io, tcp::endpoint(tcp::v4(), port))
+// handle one client
+awaitable<void> handleClient(tcp::socket socket)
 {
-    std::cout << "Server started on port " << port << std::endl;
-    startAccept();
+    char data[1024];
+
+    while (true)
+    {
+        auto [ec, length] = co_await socket.async_read_some(
+            boost::asio::buffer(data),
+            as_tuple(use_awaitable)
+        );
+
+        if (ec)
+        {
+            std::cout << "Client disconnected" << std::endl;
+            co_return;
+        }
+
+        std::string msg(data, length);
+
+        std::cout << "\nReceived:\n" << msg << std::endl;
+
+        try
+        {
+            auto json = nlohmann::json::parse(msg);
+
+            std::cout << "Type: " << json.value("type", "") << std::endl;
+            std::cout << "Sender: " << json.value("sender", "") << std::endl;
+            std::cout << "Receiver: " << json.value("receiver", "") << std::endl;
+        }
+        catch (...)
+        {
+            std::cout << "Invalid JSON" << std::endl;
+        }
+    }
 }
 
-void Server::startAccept()
+// accept connections
+awaitable<void> listener()
 {
-    auto socket = std::make_shared<tcp::socket>(acceptor_.get_executor());
+    auto ex = co_await boost::asio::this_coro::executor;
 
-    acceptor_.async_accept(*socket,
-        [this, socket](boost::system::error_code ec)
+    tcp::acceptor acceptor(ex, tcp::endpoint(tcp::v4(), 1234));
+
+    std::cout << "Server started on port 1234" << std::endl;
+
+    while (true)
+    {
+        tcp::socket socket(ex);
+
+        auto [ec] = co_await acceptor.async_accept(socket, as_tuple(use_awaitable));
+
+        if (!ec)
         {
-            if (!ec)
-            {
-                std::cout << "Client connected" << std::endl;
-                handleClient(socket);
-            }
-
-            startAccept();
-        });
+            std::cout << "Client connected" << std::endl;
+            co_spawn(ex, handleClient(std::move(socket)), detached);
+        }
+    }
 }
 
-void Server::handleClient(std::shared_ptr<tcp::socket> socket)
+// main entry
+int main()
 {
-    auto buffer = std::make_shared<std::array<char, 1024>>();
+    boost::asio::io_context io;
 
-    socket->async_read_some(
-        boost::asio::buffer(*buffer),
-        [this, socket, buffer](boost::system::error_code ec, std::size_t length)
-        {
-            if (!ec)
-            {
-                std::string msg(buffer->data(), length);
+    co_spawn(io, listener(), detached);
 
-                std::cout << "\nReceived:\n" << msg << std::endl;
-
-                try
-                {
-                    auto json = nlohmann::json::parse(msg);
-
-                    std::cout << "Type: " << json.value("type", "") << std::endl;
-                    std::cout << "Sender: " << json.value("sender", "") << std::endl;
-                    std::cout << "Receiver: " << json.value("receiver", "") << std::endl;
-                }
-                catch (...)
-                {
-                    std::cout << "Invalid JSON" << std::endl;
-                }
-
-                handleClient(socket);
-            }
-            else
-            {
-                std::cout << "Client disconnected" << std::endl;
-            }
-        });
+    io.run();
 }
