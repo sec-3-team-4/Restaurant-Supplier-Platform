@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 
 project(Server)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories(/opt/homebrew/include)
 link_directories(/opt/homebrew/lib)
@@ -13,6 +14,10 @@ add_executable(server
     UserManager.cpp
     JsonValidator.cpp
     MessageRouter.cpp
+)
+
+target_link_libraries(server
+    pthread
 )
 
 enable_testing()
@@ -35,4 +40,3 @@ target_link_libraries(server_tests
 )
 
 add_test(NAME ServerTests COMMAND server_tests)
-
