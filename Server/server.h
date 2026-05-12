@@ -13,7 +13,8 @@ public:
 
 private:
     void startAccept();
-    void handleClient(std::shared_ptr<boost::asio::ip::tcp::socket> socket);
+
+    boost::asio::awaitable<void> handleClient(std::shared_ptr<boost::asio::ip::tcp::socket> socket);
 
     boost::asio::ip::tcp::acceptor acceptor_;
 

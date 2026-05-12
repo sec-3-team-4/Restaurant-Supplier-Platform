@@ -9,199 +9,133 @@
 #include <string>
 #include <nlohmann/json.hpp>
 
-using boost::asio::ip::tcp;
+#include <boost/asio.hpp>
 
-// ===== Managers =====
+using boost::asio::ip::tcp;
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
+using boost::asio::detached;
+using boost::asio::use_awaitable;
+using boost::asio::as_tuple;
+
+// managers
 UserManager userManager;
 JsonValidator validator;
 MessageRouter router;
-
-Server::Server(boost::asio::io_context& io, int port)
-    : acceptor_(io, tcp::endpoint(tcp::v4(), port))
+awaitable<void> handleClient(tcp::socket socket)
 {
-    std::cout << "Server started on port " << port << std::endl;
-    startAccept();
+    char data[1024];
+
+    while (true)
+    {
+        auto [ec, length] = co_await socket.async_read_some(
+            boost::asio::buffer(data),
+            as_tuple(use_awaitable)
+        );
+
+        if (ec)
+        {
+            std::cout << "Client disconnected" << std::endl;
+            co_return;
+        }
+
+        std::string msg(data, length);
+
+        std::cout << "\nReceived:\n" << msg << std::endl;
+
+        if (!validator.isValid(msg))
+        {
+            std::cout << "INVALID MESSAGE\n";
+            continue;
+        }
+
+        std::cout << "VALID MESSAGE\n";
+
+        std::string result = router.route(msg);
+        std::cout << result << std::endl;
+
+        auto json = nlohmann::json::parse(msg);
+
+        std::string type = json.value("type", "");
+        std::string sender = json.value("sender", "");
+        std::string receiver = json.value("receiver", "");
+
+        std::string text = "";
+        if (json.contains("data") && json["data"].contains("text"))
+            text = json["data"]["text"];
+
+        std::cout << "\nType: " << type << std::endl;
+        std::cout << "Sender: " << sender << std::endl;
+        std::cout << "Receiver: " << receiver << std::endl;
+
+        if (!text.empty())
+            std::cout << "Message: " << text << std::endl;
+
+        // LOGIN
+        if (type == "login_request")
+        {
+            userManager.addUser(sender);
+
+            std::cout << "\nLOGIN SUCCESS: " << sender << std::endl;
+
+            nlohmann::json response;
+            response["type"] = "login_response";
+            response["status"] = "success";
+            response["message"] = "Login successful";
+
+            std::string reply = response.dump() + "\n";
+
+            co_await boost::asio::async_write(
+                socket,
+                boost::asio::buffer(reply),
+                use_awaitable
+            );
+
+            std::cout << "Login response sent\n";
+        }
+
+        // LOGOUT
+        else if (type == "logout")
+        {
+            userManager.removeUser(sender);
+            std::cout << "LOGOUT: " << sender << std::endl;
+        }
+
+        // CHAT
+        else if (type == "chat_message")
+        {
+            std::cout << "\nCHAT from " << sender << " to " << receiver << std::endl;
+
+            std::string forwardMsg = sender + ": " + text;
+
+            co_await boost::asio::async_write(
+                socket,
+                boost::asio::buffer(forwardMsg + "\n"),
+                use_awaitable
+            );
+
+            std::cout << "Message forwarded\n";
+        }
+
+        if (userManager.isOnline(sender))
+        {
+            std::cout << sender << " is ONLINE" << std::endl;
+        }
+    }
 }
 
-// ===== Accept new clients =====
-void Server::startAccept()
+awaitable<void> listener(boost::asio::io_context& io)
 {
-    auto socket = std::make_shared<tcp::socket>(acceptor_.get_executor());
+    tcp::acceptor acceptor(io, tcp::endpoint(tcp::v4(), 54321));
 
-    acceptor_.async_accept(*socket,
-        [this, socket](boost::system::error_code ec)
-        {
-            if (!ec)
-            {
-                std::cout << "\nClient connected" << std::endl;
-                handleClient(socket);
-            }
+    std::cout << "Server running on port 54321\n";
 
-            startAccept();
-        });
-}
+    while (true)
+    {
+        tcp::socket socket = co_await acceptor.async_accept(use_awaitable);
 
-// ===== Handle each client =====
-void Server::handleClient(std::shared_ptr<tcp::socket> socket)
-{
-    auto buffer = std::make_shared<std::array<char, 1024>>();
+        std::cout << "Client connected\n";
 
-    socket->async_read_some(
-        boost::asio::buffer(*buffer),
-        [this, socket, buffer](boost::system::error_code ec, std::size_t length)
-        {
-            if (ec)
-            {
-                std::cout << "Client disconnected" << std::endl;
-                return;
-            }
-
-            std::string msg(buffer->data(), length);
-
-            std::cout << "\nReceived:\n" << msg << std::endl;
-
-            // validate JSON
-            if (!validator.isValid(msg))
-            {
-                std::cout << "INVALID MESSAGE\n";
-                handleClient(socket);
-                return;
-            }
-
-            std::cout << "VALID MESSAGE\n";
-
-<<<<<<< Updated upstream
-            std::string result = router.route(msg);
-            std::cout << result << std::endl;
-
-=======
->>>>>>> Stashed changes
-            try
-            {
-                auto json = nlohmann::json::parse(msg);
-
-                std::string type = json.value("type", "");
-                std::string sender = json.value("sender", "");
-                std::string receiver = json.value("receiver", "");
-
-                std::string text = "";
-<<<<<<< Updated upstream
-
-                if (json.contains("data") &&
-                    json["data"].contains("text"))
-                {
-=======
-                if (json.contains("data") && json["data"].contains("text"))
->>>>>>> Stashed changes
-                    text = json["data"]["text"];
-
-<<<<<<< Updated upstream
-                std::cout << "Type: " << type << std::endl;
-                std::cout << "Sender: " << sender << std::endl;
-                std::cout << "Receiver: " << receiver << std::endl;
-=======
-                // ===== CLEAN OUTPUT (THIS IS WHAT YOU WANTED) =====
-                std::cout << "\nType: " << type << std::endl;
-                std::cout << "Sender: " << sender << std::endl;
-                std::cout << "Receiver: " << receiver << std::endl;
-
-                if (!text.empty())
-                {
-                    std::cout << "Message: " << text << std::endl;
-                }
->>>>>>> Stashed changes
-
-                if (!text.empty())
-                {
-                    std::cout << "Message: " << text << std::endl;
-                }
-
-                // LOGIN
-                if (type == "login_request")
-                {
-                    userManager.addUser(sender);
-                    clients[sender] = socket;
-
-<<<<<<< Updated upstream
-                    std::cout << sender << " logged in" << std::endl;
-                }
-
-                // LOGOUT
-                if (type == "logout")
-=======
-                    std::cout << "\nLOGIN SUCCESS: " << sender << std::endl;
-
-                    nlohmann::json response;
-                    response["type"] = "login_response";
-                    response["status"] = "success";
-                    response["message"] = "Login successful";
-
-                    std::string reply = response.dump() + "\n";
-
-                    boost::asio::write(*socket, boost::asio::buffer(reply));
-
-                    std::cout << "Login response sent\n";
-                }
-
-                // ================= LOGOUT =================
-                else if (type == "logout")
->>>>>>> Stashed changes
-                {
-                    userManager.removeUser(sender);
-                    clients.erase(sender);
-
-                    std::cout << "LOGOUT: " << sender << std::endl;
-                }
-
-<<<<<<< Updated upstream
-                // CHAT MESSAGE
-                if (type == "chat_message")
-=======
-                // ================= CHAT =================
-                else if (type == "chat_message")
->>>>>>> Stashed changes
-                {
-                    std::cout << "\nCHAT from " << sender << " to " << receiver << std::endl;
-
-                    if (clients.find(receiver) != clients.end())
-                    {
-                        std::string forwardMsg =
-                            sender + ": " + text;
-
-                        boost::asio::write(
-                            *clients[receiver],
-<<<<<<< Updated upstream
-                            boost::asio::buffer(forwardMsg));
-=======
-                            boost::asio::buffer(forwardMsg + "\n")
-                        );
->>>>>>> Stashed changes
-
-                        std::cout << "Message forwarded successfully to "
-                                  << receiver << std::endl;
-                    }
-                    else
-                    {
-                        std::cout << "Receiver not online: "
-                                  << receiver << std::endl;
-                    }
-                }
-
-<<<<<<< Updated upstream
-                // ONLINE CHECK
-=======
-                // ===== USER STATUS =====
->>>>>>> Stashed changes
-                if (userManager.isOnline(sender))
-                {
-                    std::cout << sender << " is ONLINE" << std::endl;
-                }
-            }
-            catch (...)
-            {
-                std::cout << "JSON parsing error" << std::endl;
-            }
-
-            handleClient(socket);
-        });
+        co_spawn(io, handleClient(std::move(socket)), detached);
+    }
 }

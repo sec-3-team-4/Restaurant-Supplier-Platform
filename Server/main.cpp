@@ -5,9 +5,7 @@ int main()
 {
     boost::asio::io_context io;
 
-    Server server(io, 1234);
+    co_spawn(io, listener(io), boost::asio::detached);
 
     io.run();
-
-    return 0;
 }
